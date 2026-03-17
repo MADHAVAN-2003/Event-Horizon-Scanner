@@ -1,97 +1,83 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Event Horizon Scanner
 
-# Getting Started
+A React Native mobile application designed for gatekeepers at large events to scan and validate visitor tickets efficiently, with robust offline capabilities.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
+- **Offline First**: Works completely offline after the initial data synchronization.
+- **Fast Validation**: Validates tickets in less than 1 second from the local database (SQLite).
+- **Prevent Duplicate Entry**: Detects and prevents already used tickets from being scanned again.
+- **Multi-Device Synchronization**: Handles scenarios where multiple devices act as independent gates, preventing duplicate scans across devices when online, and securely queuing updates when offline.
 
-## Step 1: Start Metro
+## Database Structure
+The application uses **Supabase** as the remote backend and **SQLite** for local storage.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Tickets Table:
+- `ticket_id` (String, Primary Key) - Unique identifier for the ticket.
+- `name` (String) - Name of the attendee.
+- `event_name` (String) - Name of the event.
+- `status` (String) - Can be `valid` or `used`.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Offline and Sync Strategy
 
+### 1. Initial Data Sync
+When the application starts with an active internet connection, it fetches the comprehensive ticket dataset (e.g., 50,000+ tickets) from the central Supabase database and caches it locally using `react-native-sqlite-storage`. After this initial sync, the app is fully capable of operating completely offline.
+
+### 2. Offline Ticket Validation
+During offline mode, ticket scanning and validation are performed entirely against the local SQLite database. When a QR code is scanned, the app instantly checks the local records to determine if the ticket is valid, used, or invalid, providing sub-second validation times without network dependency.
+
+### 3. Synchronization and Multi-Device Handling
+- **Local State Update**: Upon a successful scan, the ticket status is immediately updated to `used` in the local database to prevent duplicate entries at the same gate.
+- **Background Sync**: The app continuously monitors network connectivity. When internet access is available, local changes (newly scanned tickets) are pushed to the central Supabase database.
+- **Handling Multiple Gates**: To support 5-6 devices simultaneously scanning offline:
+  - Local changes are queued and synced to the cloud once connectivity is restored.
+  - The server acts as the ultimate source of truth. If conflicts arise, they are resolved centrally.
+  - The app periodically pulls delta updates from the server to the local database to assure all gatekeeper devices reflect the latest ticket statuses, preventing a ticket used at Gate A from being accepted later at Gate B.
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js (>= 22.11.0)
+- React Native Environment Setup for Android/iOS
+
+### 1. Clone the repository and install dependencies
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+npm install
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+### 2. Environment Variables (.env setup)
+Create a `.env` file in the root of the project. You can copy the contents from `.env.example` if it exists. Provide your Supabase keys and testing user credentials.
 
 ```sh
-# Using npm
-npm run android
+# .env
+SUPABASE_PROJ_ID=your_supabase_project_id
+SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# OR using Yarn
-yarn android
+# Test credentials for the app
+USER_EMAIL=admin@eventhorizon.com
+USER_PASSWORD=123456
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
+### 3. iOS Setup (macOS only)
 ```sh
+cd ios
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
+cd ..
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### 4. Running the App
 
+Start the Metro bundler:
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+npm start
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+Run on Android:
+```sh
+npm run android
+```
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Run on iOS:
+```sh
+npm run ios
+```
